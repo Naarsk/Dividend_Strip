@@ -1,0 +1,87 @@
+
+\documentclass[12pt]{article}
+\usepackage{amsmath, amssymb}
+\usepackage{geometry}
+\usepackage{amsfonts}
+\geometry{margin=1in}
+
+\title{Summary and Methodology of\\\textit{Valuing Private Equity Investments Strip by Strip}}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section{Overview}
+This document summarizes the paper \textit{Valuing Private Equity Investments Strip by Strip} by Arpit Gupta and Stijn Van Nieuwerburgh. The paper introduces a new method to value private equity (PE) investments by constructing replicating portfolios of publicly traded securities, namely zero-coupon bonds and equity strips. These replicating portfolios match the cash flow timing and risk characteristics of private equity funds.
+
+\section{Replicating Strips: Construction of Factors}
+The paper constructs a set of public market instruments, or ``strips'', which represent the priced risk factors used to value PE. These include:
+
+\begin{itemize}
+    \item Zero-coupon bonds
+    \item Dividend strips on aggregate and factor-sorted portfolios
+    \item Capital gain strips on aggregate and factor-sorted portfolios
+\end{itemize}
+
+Let $F_{t,t+h}$ denote the $K \times 1$ vector of cash-flow realizations over horizon $h$, where $K$ is the number of risk factors. Each element of $F_{t,t+h}$ corresponds to a specific strip:
+
+\begin{equation}
+F_{t,t+h} = \begin{bmatrix}
+1 \\
+\frac{D^m_{t+h}}{D^m_t} \\
+\frac{P^m_{t+h}}{P^m_t} \\
+\vdots \\
+\frac{D^f_{t+h}}{D^f_t} \\
+\frac{P^f_{t+h}}{P^f_t}
+\end{bmatrix}
+\end{equation}
+
+Where:
+\begin{itemize}
+    \item $D^m_{t}$ is the dividend on the market portfolio at time $t$
+    \item $P^m_{t}$ is the price of the market portfolio at time $t$
+    \item $D^f_{t}$ and $P^f_{t}$ refer to the dividend and price of factor portfolios (e.g., value, momentum)
+\end{itemize}
+
+\section{Linking PE Cash Flows to Strips}
+PE fund cash flows are decomposed into operating cash flows and exit cash flows. These are mapped to dividend and gain strips respectively:
+
+\begin{itemize}
+    \item \textbf{Operating income} from portfolio firms maps to \textit{dividend strips}
+    \item \textbf{Exit proceeds} from asset sales map to \textit{capital gain strips}
+\end{itemize}
+
+\section{Linear Pricing Model}
+Let $C_{i,t+h}$ be the cash flow of PE fund $i$ at time $t+h$. The cash flow is priced as a linear function of the strip payoffs:
+
+\begin{equation}
+\mathbb{E}[C_{i,t+h}] = \beta_i^\top F_{t,t+h}
+\end{equation}
+
+The model estimates $\beta_i$, the fund’s exposure to each strip.
+
+\section{Total Set of Strips}
+The full model includes:
+
+\begin{itemize}
+    \item 1 zero-coupon bond
+    \item 7 dividend strips (market + 6 factors)
+    \item 7 gain strips (market + 6 factors)
+\end{itemize}
+
+Total of $K = 15$ risk factors, each with $H = 64$ horizons (quarters), yielding 960 distinct priced strips.
+
+\section{Estimation Approach}
+The authors estimate the pricing kernel using GMM, exploiting both the time series and cross-sectional variation in PE fund returns.
+
+\subsection{Valuation}
+Valuation of a PE fund is achieved by summing the present value of expected future cash flows weighted by the strip prices:
+
+\begin{equation}
+\text{Value}_{i,t} = \sum_{h=1}^{H} \beta_i^\top F_{t,t+h} \cdot \text{Price}(F_{t,t+h})
+\end{equation}
+
+\section{Conclusion}
+This methodology allows for a transparent, replicable approach to valuing PE investments, linking them directly to publicly observable risk factors. It provides insights into the sources of PE returns and their risk exposures over time.
+\end{document}
