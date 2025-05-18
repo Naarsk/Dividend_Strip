@@ -1,0 +1,2 @@
+# load("C:/Users/leocr/Projects/Economics/Finance/PE_dividend_strip/synthetic_data/MergedCashFlowOct20.Rda")
+load("C:/Users/leocr/Projects/Economics/Finance/PE_dividend_strip/synthetic_data/YearlyCashFlowOct20.Rda")

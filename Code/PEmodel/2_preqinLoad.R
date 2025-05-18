@@ -636,8 +636,8 @@ pecf <- pecf %>%
 
 
 # pecf.alt: version with only $1 capital calls; pecf.1.call
-#pecf.alt = pecf %>% mutate(Transaction.Amount = ifelse(Transaction.Amount < 0, 0, Transaction.Amount))
-#pecf.alt = pecf.alt %>% group_by(Fund.ID) %>% arrange(Transaction.Date) %>%
+# pecf.alt = pecf %>% mutate(Transaction.Amount = ifelse(Transaction.Amount < 0, 0, Transaction.Amount))
+# pecf.alt = pecf.alt %>% group_by(Fund.ID) %>% arrange(Transaction.Date) %>%
 #  mutate(Transaction.Amount = ifelse(row_number() == 1, Transaction.Amount - 10000000, Transaction.Amount)) %>%
 #  as.data.frame()
 
