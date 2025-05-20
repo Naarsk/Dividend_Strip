@@ -1,9 +1,13 @@
 import pandas as pd
+import pyreadr
 
 pd.set_option('display.max_columns', None)
 
 cashflow_file_path = "C:/Users/leocr/Projects/Economics/Finance/PE_dividend_strip/Data_Preqin_Raw/Cashflows.xlsx"
 fund_file_path = "C:/Users/leocr/Projects/Economics/Finance/PE_dividend_strip/Data_Preqin_Raw/Funds.xlsx"
+discount_rates_file_path = "C:/Users/leocr/Projects/Economics/Finance/PE_dividend_strip/Data/DiscountRatesOct20.Rda"
+
+H=64
 
 # Load data
 df = pd.read_excel(cashflow_file_path)
@@ -31,18 +35,25 @@ cf_df['Quarter'] = cf_df['Date'].apply(convert_to_quarter_fraction)
 cf_df['Vintage'] = cf_df['VintageYear'].astype(float)
 cf_df['QuartersSinceInception'] = ((cf_df['Quarter'] - cf_df['Vintage']) / 0.25).astype(int)
 
+rda_data = pyreadr.read_r(discount_rates_file_path)
+discount_rates_df = rda_data['late.discount.rates.quarterly']
+discount_rates_df.columns = ['Quarter', 'ForwardRate', 'DiscountRate', 'Vintage']
+
 ## SPLIT CASHFLOWS AFTER 16y TO LAST £ QUARTERS
 
-# Separate rows exceeding quarter 63
-exceeding_rows = cf_df[cf_df['QuartersSinceInception'] > 63].copy()
-remaining_rows = cf_df[cf_df['QuartersSinceInception'] <= 63].copy()
+# Separate rows exceeding quarter 64
+"""
+remaining_rows = cf_df[cf_df['QuartersSinceInception'] <= H].copy()
+exceeding_rows = cf_df[cf_df['QuartersSinceInception'] > H].copy()
+
+exceeding_rows = pd.merge(exceeding_rows, discount_rates_df, on=['Quarter','Vintage'], how='left')
 
 # Create new redistributed rows
 redistributed_rows = []
 
 for _, row in exceeding_rows.iterrows():
-    third_cashflow = row['ScaledCashflow'] / 3
-    for qsi in [61, 62, 63]:
+    third_cashflow = row['ScaledCashflow'] / (3*row['DiscountRate'])
+    for qsi in [H-2, H-1, H]:
         new_row = row.copy()
         new_row['QuartersSinceInception'] = qsi
         new_row['Quarter'] = row['Vintage'] + 0.25 * qsi
@@ -52,6 +63,8 @@ for _, row in exceeding_rows.iterrows():
 # Create final DataFrame
 redistributed_df = pd.DataFrame(redistributed_rows)
 multiline_df = pd.concat([remaining_rows, redistributed_df], ignore_index=True)
+"""
+multiline_df =cf_df[cf_df['QuartersSinceInception'] <= H].copy()
 
 ## AGGREGATE
 
@@ -85,5 +98,5 @@ final_df = pd.merge(summed_cf, metadata.drop(columns=['ScaledCashflow']), on=gro
 final_df.sort_values(by=['FundID', 'QuartersSinceInception'], inplace=True)
 
 # Save to file
-final_df[['FundID', 'QuartersSinceInception', 'ScaledCashflow', 'AssetClass', 'Quarter', 'Vintage']].to_csv("pe_cashflows_scaled.csv", index=False)
+final_df[['FundID', 'QuartersSinceInception', 'ScaledCashflow', 'AssetClass', 'Quarter', 'Vintage']].to_csv("pe_discounted_cashflows.csv", index=False)
 

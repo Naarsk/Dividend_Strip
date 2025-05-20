@@ -24,7 +24,6 @@ gain_columns = gain_series[
      'gain.cohort.small', 'gain.cohort.growth', 'gain.cohort.nr']
 ]
 
-
 merged = pd.merge(
     dividend_columns,
     gain_columns,
@@ -38,10 +37,10 @@ merged.insert(2, 'ZeroCouponBond', 1.0)
 # Rename columns for consistency
 merged.columns = [
     'Quarter', 'Vintage', 'ZeroCouponBond',
-    'Dividend_Value', 'Dividend_REIT', 'Dividend_Infra', 'Dividend_Market',
-    'Dividend_Small', 'Dividend_Growth', 'Dividend_NR',
-    'Gain_Value', 'Gain_REIT', 'Gain_Infra', 'Gain_Market',
-    'Gain_Small', 'Gain_Growth', 'Gain_NR'
+    'DividendValue', 'DividendREIT', 'DividendInfra',
+    'DividendMarket', 'DividendSmall', 'DividendGrowth',
+    'DividendNR', 'GainValue', 'GainREIT',
+    'GainInfra', 'GainMarket', 'GainSmall', 'GainGrowth', 'GainNR'
 ]
 
 # Final check

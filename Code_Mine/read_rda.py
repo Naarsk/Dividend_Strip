@@ -4,7 +4,7 @@ import pyreadr
 pd.set_option('display.max_columns', None)
 
 # Load the .Rda file
-result = pyreadr.read_r("C:/Users/leocr/Projects/Economics/Finance/PE_dividend_strip/Data/DividendStripOct20.Rda")
+result = pyreadr.read_r("C:/Users/leocr/Projects/Economics/Finance/PE_dividend_strip/Data/DiscountRatesOct20.Rda")
 
 # Check what objects are in the file
 print(result.keys())  # e.g., dict_keys(['DividendStripOct20'])

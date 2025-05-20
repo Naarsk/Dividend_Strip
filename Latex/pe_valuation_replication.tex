@@ -2,6 +2,7 @@
 \usepackage{amsmath, amssymb}
 \usepackage{geometry}
 \usepackage{amsfonts}
+\usepackage{graphicx}
 \geometry{margin=1in}
 
 \title{Replication of\\\textit{Valuing Private Equity Investments Strip by Strip} by A. Gupta and S. Van Nieuwerburgh}
@@ -78,11 +79,48 @@ The paper considers a total of $K=15$ risk factor payoff strips, as follows:
     \end{itemize}
     They then proceed to estimate it using an elastic net:
     \begin{equation}
-        \hat \beta = \arg \min _{\beta \in \mathbb R^{KH}_+} \left \Vert X_{t+h}^i = \beta^i_{t,h} F_{t,t+h} \right \Vert_2^2 + \lambda \left[(1-\alpha)\Vert \beta \Vert_2^2 + \alpha \Vert \beta \Vert_1\right]
+        \hat \beta = \arg \min _{\beta \in \mathbb R^{KH}_+} \left \Vert X_{t+h}^i - \beta_{t,h} F_{t,t+h} \right \Vert_2^2 + \lambda \left[(1-\alpha)\Vert \beta \Vert_2^2 + \alpha \Vert \beta \Vert_1\right]
         \label{eq:elastic-net}
     \end{equation}
     where $\lambda$ is the total penalty amount, and $\alpha$ the mixing parameter between LASSO ($\alpha =1$) and RIDGE ($\alpha =0$) penalties.
     Note that the estimation is restricted to only positive parameters.
 
+    \subsection{Implementation}\label{subsec:implementation}
+    In my implementation the regressions are run jointly for all 15 stips and 64 quarters of activity.
+    Therefore, $KH=960$ parameters are estimated.
+    The data is organized as follows:
+    \begin{itemize}
+        \item $F_{ikh}$ is a 3-dimensional tensor with dimensions $n_{funds} \times K \times H$, i.e., for each fund, we have a panel covering the realization of the 15 strips across 64 quarters, from inception to termination. Specifically, $h$ refers to the realization of the strip between the time of inception of the fund and the $h$-th quarter following the inception.
+        \item $X_{ih}$ is a 2-dimensional tensor with dimensions $n_{funds} \times H$, i.e., for each fund, we have its cashflows across the 64 quarters of activity.
+        \item $\beta_{kh}$ is a 2-dimensional tensor with dimensions $K \times H$, i.e., our aim is to estimate a cross-section of the average exposures to the different strips across 64 quarters of activity.
+    \end{itemize}
+    For the few funds lasting more than 16 years, all cashflows exceeding the last quarter are discounted split between the last 3 quarters, as the authors do in the paper.
+    Thus, the model actually implemented is:
+    \begin{equation}
+        \hat X_{i,h} = \sum_{k=1}^K \beta_{kh} F_{ikh} , \qquad h=1,\hdots, H, \quad i = 1, \hdots, n_{funds}
+    \end{equation}
+    Before regressing, the funds are classified based on their asset class, according to fund metadata, and run separately.
+    Three main asset classes are considered:
+    \begin{itemize}
+        \item Private Equity, referred in the paper as \textit{Buyout}, while the use Private Equity as an umbrella term.
+        This asset class corresponds to what is usually called Private Equity.
+        \item Venture Capital
+        \item Real Estate
+    \end{itemize}
+    The optimal values for $\alpha$ and $\lambda$ are obtained trough a $5$-fold cross validation.
 
+    \subsection{Results}\label{subsec:results}
+    \begin{figure}[h!]
+        \label{fig:betas}
+        \centering
+        \includegraphics[width=0.9\linewidth]{img/img_1}
+    \end{figure}
+
+    \subsection{Code}
+    The code consists of 6 parts, to be run after the execution of the code for strips generation provided by the authors, APmain.m:
+    \begin{itemize}
+        \item 01\_create\_strip\_data.py takes the output DividendStripOct20.Rda of APmain.m and organizes it in .csv file for further processing
+        \item 02\_create\_pe\_cashflows.py takes the output DiscountRatesOct20.Rda of APmain.m, Preqin cashflow data and funds metadata, convert cashflow dates into quarters from inception (which comes from the metadata), scales cashflows to  and organizes it in .csv file for further processing
+
+    \end{itemize}
 \end{document}
