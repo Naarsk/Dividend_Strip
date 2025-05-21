@@ -5,7 +5,7 @@
 \usepackage{graphicx}
 \geometry{margin=1in}
 
-\title{Replication of\\\textit{Valuing Private Equity Investments Strip by Strip} by A. Gupta and S. Van Nieuwerburgh}
+\title{Replication of\\\textit{Valuing Private Equity Investments Strip by Strip} \\by A. Gupta and S. Van Nieuwerburgh}
 \author{Leonardo Cruciani}
 \date{\today}
 
@@ -111,31 +111,44 @@ The paper considers a total of $K=15$ risk factor payoff strips, as follows:
     The optimal values for $\alpha$ and $\lambda$ are obtained trough a $15$-fold cross validation.
 
     \subsection{Code}
-    The code consists of 6 parts, to be run after the execution of the code for strips generation provided by the authors, APmain.m:
-    \begin{itemize}
-        \item \textit{01\_create\_strip\_data.py} takes the output \textit{DividendStripOct20.Rda} of APmain.m, i.e. the 14 strips excluding the zero-coupon bond, and organizes it in .csv file for further processing.
-        \item \textit{02\_create\_pe\_cashflows.py} takes the output \textit{DiscountRatesOct20.Rda} of APmain.m, Preqin cashflow data and funds metadata, convert cashflow dates into quarters from inception (which comes from the metadata), scales cashflows, discounts and redistribute cashflows after 16 years to the last 3 quarters, and organizes it in .csv file for further processing.
-        \item \textit{03\_fill\_missing\_cashflows.py} fill with 0 the quarters where cashflows are not present, as it is done in the paper, in order to obtain a panel for each fund.
-        \item \textit{04\_merge\_data.py} merges cashflows and strip data based on the couple inception quarter - current quarter.
-        \item \textit{05\_elastic\_net\_regression.py} loads the merged data, discards funds with cashflows in dates following 2019, determines the optimal total amount of penalty and ratio by cross validation, performs the elastic net regression using the optimal parameters, and exports the results.
-        This script uses the script \textit{ADMM\_elastic.py} where the function for the elastic net and for cross-validation are implemented:
+        The code consists of 6 parts, to be run after the execution of the code for strips generation provided by the authors, APmain.m:
         \begin{itemize}
-            \item Function \textit{ADMM\_elastic\_net} solves the constrained minimization problem using ADMM logic~\ref{admm}.
-            \item Function \textit{generate\_alpha\_grid\_multitask} generates a grid of total penalties for each penalty ratio appropriate for each sample.
-            The $\lambda_1$\('\)s are provided as an input.
-            \item Function \textit{cross\_validate\_elastic\_net}, for each $\lambda_1$ provided, calls the previous function and generates and array of $\alpha$\('\)s and for each couple, splits the dataset, perform the elastic net regression on the training subsample, and calculate the error with its predicted value.
-            Then takes the mean square across the validation folds.
-            The couple of parameters with the least mse are chosen to be the optimal.
+            \item \textit{01\_create\_strip\_data.py} takes the output \textit{DividendStripOct20.Rda} of APmain.m, i.e. the 14 strips excluding the zero-coupon bond, and organizes it in .csv file for further processing.
+            \item \textit{02\_create\_pe\_cashflows.py} takes the output \textit{DiscountRatesOct20.Rda} of APmain.m, Preqin cashflow data and funds metadata, convert cashflow dates into quarters from inception (which comes from the metadata), scales cashflows, discounts and redistribute cashflows after 16 years to the last 3 quarters, and organizes it in .csv file for further processing.
+            \item \textit{03\_fill\_missing\_cashflows.py} fill with 0 the quarters where cashflows are not present, as it is done in the paper, in order to obtain a panel for each fund.
+            \item \textit{04\_merge\_data.py} merges cashflows and strip data based on the couple inception quarter - current quarter.
+            \item \textit{05\_elastic\_net\_regression.py} loads the merged data, discards funds with cashflows in dates following 2019, determines the optimal total amount of penalty and ratio by cross validation, performs the elastic net regression using the optimal parameters, and exports the results.
+            This script uses the script \textit{ADMM\_elastic.py} where the function for the elastic net and for cross-validation are implemented:
+            \begin{itemize}
+                \item Function \textit{ADMM\_elastic\_net} solves the constrained minimization problem using ADMM logic~\ref{admm}.
+                \item Function \textit{generate\_alpha\_grid\_multitask} generates a grid of total penalties for each penalty ratio appropriate for each sample.
+                The $\lambda_1$\('\)s are provided as an input.
+                \item Function \textit{cross\_validate\_elastic\_net}, for each $\lambda_1$ provided, calls the previous function and generates and array of $\alpha$\('\)s and for each couple, splits the dataset, perform the elastic net regression on the training subsample, and calculate the error with its predicted value.
+                Then takes the mean square across the validation folds.
+                The couple of parameters with the least mse are chosen to be the optimal.
+            \end{itemize}
+            \item \textit{06\_make\_plot.py} plots the results, by aggregating the quarters into years (taking the average across the quarters), to match the paper's display of the data.
         \end{itemize}
-        \item \textit{06\_make\_plot.py} plots the results.
-    \end{itemize}
 
     \subsection{Results}\label{subsec:results}
-    \begin{figure}[h!]
-        \label{fig:betas}
-        \centering
-        \includegraphics[width=0.9\linewidth]{img/img_1}
-    \end{figure}
+
+    As we can see in figure~\ref{fig:betas}, replication does not match exactly the results of the paper.
+    The main reasons are the following:
+    \begin{itemize}
+        \item The net exhibits little sensitivity with respect of hyperparameters choice (see the attached log file).
+        Specifically, even if the least MSE is consistently obtained for parameters close to the optimal value, and monotonically increases as values further away from the optimal are used, the overall change is very modest.
+        \item The paper performs some additional operations on the cashflows as obtained from Preqin, but fails to provide a clear description or code for data cleaning.
+        I tried reaching out the authors to have better guidance on the dataset obtained from Preqin (i.e. what data did they actually download), but they could not help, citing the fact that too many years have passed and Preqin often reorganizes interfaces and datasets.
+    \end{itemize}
+
+        \begin{figure}[h!]
+            \centering
+            \includegraphics[height=10cm]{img/img_3}
+            \hspace{1em} % small horizontal space between images
+            \includegraphics[height=10cm]{img/img_paper}
+            \caption{Comparison between my results (left), and paper results (right)}
+            \label{fig:betas}
+        \end{figure}
 
 
 \end{document}
