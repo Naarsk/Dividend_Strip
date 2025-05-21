@@ -42,7 +42,6 @@ discount_rates_df.columns = ['Quarter', 'ForwardRate', 'DiscountRate', 'Vintage'
 ## SPLIT CASHFLOWS AFTER 16y TO LAST £ QUARTERS
 
 # Separate rows exceeding quarter 64
-"""
 remaining_rows = cf_df[cf_df['QuartersSinceInception'] <= H].copy()
 exceeding_rows = cf_df[cf_df['QuartersSinceInception'] > H].copy()
 
@@ -63,8 +62,8 @@ for _, row in exceeding_rows.iterrows():
 # Create final DataFrame
 redistributed_df = pd.DataFrame(redistributed_rows)
 multiline_df = pd.concat([remaining_rows, redistributed_df], ignore_index=True)
-"""
-multiline_df =cf_df[cf_df['QuartersSinceInception'] <= H].copy()
+
+#multiline_df =cf_df[cf_df['QuartersSinceInception'] <= H].copy()
 
 ## AGGREGATE
 

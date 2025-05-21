@@ -79,10 +79,10 @@ The paper considers a total of $K=15$ risk factor payoff strips, as follows:
     \end{itemize}
     They then proceed to estimate it using an elastic net:
     \begin{equation}
-        \hat \beta = \arg \min _{\beta \in \mathbb R^{KH}_+} \left \Vert X_{t+h}^i - \beta_{t,h} F_{t,t+h} \right \Vert_2^2 + \lambda \left[(1-\alpha)\Vert \beta \Vert_2^2 + \alpha \Vert \beta \Vert_1\right]
+        \hat \beta = \arg \min _{\beta \in \mathbb R^{KH}_+} \left \Vert X_{t+h}^i - \beta_{t,h} F_{t,t+h} \right \Vert_2^2 + \alpha \left[(1-\lambda_1)\Vert \beta \Vert_2^2 + \lambda_1 \Vert \beta \Vert_1\right]
         \label{eq:elastic-net}
     \end{equation}
-    where $\lambda$ is the total penalty amount, and $\alpha$ the mixing parameter between LASSO ($\alpha =1$) and RIDGE ($\alpha =0$) penalties.
+    where $\alpha$ is the total penalty amount, and $\lambda_1$ is the mixing parameter between LASSO ($\lambda_1 =1$) and RIDGE ($\lambda_1 =0$) penalties.
     Note that the estimation is restricted to only positive parameters.
 
     \subsection{Implementation}\label{subsec:implementation}
@@ -98,6 +98,7 @@ The paper considers a total of $K=15$ risk factor payoff strips, as follows:
     Thus, the model actually implemented is:
     \begin{equation}
         \hat X_{i,h} = \sum_{k=1}^K \beta_{kh} F_{ikh} , \qquad h=1,\hdots, H, \quad i = 1, \hdots, n_{funds}
+        \label{eq:exposures_2}
     \end{equation}
     Before regressing, the funds are classified based on their asset class, according to fund metadata, and run separately.
     Three main asset classes are considered:
@@ -107,7 +108,27 @@ The paper considers a total of $K=15$ risk factor payoff strips, as follows:
         \item Venture Capital
         \item Real Estate
     \end{itemize}
-    The optimal values for $\alpha$ and $\lambda$ are obtained trough a $5$-fold cross validation.
+    The optimal values for $\alpha$ and $\lambda$ are obtained trough a $15$-fold cross validation.
+
+    \subsection{Code}
+    The code consists of 6 parts, to be run after the execution of the code for strips generation provided by the authors, APmain.m:
+    \begin{itemize}
+        \item \textit{01\_create\_strip\_data.py} takes the output \textit{DividendStripOct20.Rda} of APmain.m, i.e. the 14 strips excluding the zero-coupon bond, and organizes it in .csv file for further processing.
+        \item \textit{02\_create\_pe\_cashflows.py} takes the output \textit{DiscountRatesOct20.Rda} of APmain.m, Preqin cashflow data and funds metadata, convert cashflow dates into quarters from inception (which comes from the metadata), scales cashflows, discounts and redistribute cashflows after 16 years to the last 3 quarters, and organizes it in .csv file for further processing.
+        \item \textit{03\_fill\_missing\_cashflows.py} fill with 0 the quarters where cashflows are not present, as it is done in the paper, in order to obtain a panel for each fund.
+        \item \textit{04\_merge\_data.py} merges cashflows and strip data based on the couple inception quarter - current quarter.
+        \item \textit{05\_elastic\_net\_regression.py} loads the merged data, discards funds with cashflows in dates following 2019, determines the optimal total amount of penalty and ratio by cross validation, performs the elastic net regression using the optimal parameters, and exports the results.
+        This script uses the script \textit{ADMM\_elastic.py} where the function for the elastic net and for cross-validation are implemented:
+        \begin{itemize}
+            \item Function \textit{ADMM\_elastic\_net} solves the constrained minimization problem using ADMM logic~\ref{admm}.
+            \item Function \textit{generate\_alpha\_grid\_multitask} generates a grid of total penalties for each penalty ratio appropriate for each sample.
+            The $\lambda_1$\('\)s are provided as an input.
+            \item Function \textit{cross\_validate\_elastic\_net}, for each $\lambda_1$ provided, calls the previous function and generates and array of $\alpha$\('\)s and for each couple, splits the dataset, perform the elastic net regression on the training subsample, and calculate the error with its predicted value.
+            Then takes the mean square across the validation folds.
+            The couple of parameters with the least mse are chosen to be the optimal.
+        \end{itemize}
+        \item \textit{06\_make\_plot.py} plots the results.
+    \end{itemize}
 
     \subsection{Results}\label{subsec:results}
     \begin{figure}[h!]
@@ -116,11 +137,5 @@ The paper considers a total of $K=15$ risk factor payoff strips, as follows:
         \includegraphics[width=0.9\linewidth]{img/img_1}
     \end{figure}
 
-    \subsection{Code}
-    The code consists of 6 parts, to be run after the execution of the code for strips generation provided by the authors, APmain.m:
-    \begin{itemize}
-        \item 01\_create\_strip\_data.py takes the output DividendStripOct20.Rda of APmain.m and organizes it in .csv file for further processing
-        \item 02\_create\_pe\_cashflows.py takes the output DiscountRatesOct20.Rda of APmain.m, Preqin cashflow data and funds metadata, convert cashflow dates into quarters from inception (which comes from the metadata), scales cashflows to  and organizes it in .csv file for further processing
 
-    \end{itemize}
 \end{document}

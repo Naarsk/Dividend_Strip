@@ -49,7 +49,7 @@ for (dividend, gain), color in zip(strip_pairs, selected_colors):
     styles[gain] = {'color': color, 'linestyle': '-'}
 
 # Plotting loop
-for ax, (asset_class, df) in zip(axes, results.items()):
+for ax, (asset_class, df) in zip(axes[:-1], results.items()) :
     B = df.to_numpy()
 
     for i, name in enumerate(strip_columns):

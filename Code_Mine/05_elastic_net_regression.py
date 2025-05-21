@@ -1,31 +1,32 @@
 import time
-
+import logging
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from sklearn.preprocessing import StandardScaler
 
-from multitask_elastic import cross_validate_elastic_net, multitask_elastic_net, generate_alpha_grid
+from ADMM_elastic import cross_validate_elastic_net, ADMM_elastic_net
+
+# Setup logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 pd.set_option('display.max_columns', None)
 
 start = time.time()
+logging.info("Loading data...")
 
-print("Loading data...")
 # Load data
-
 df = pd.read_csv("dataset.csv")
 
-# Find FundsIDs with at least one Quarter > 2019
+# Drop FundsIDs with any Quarter > 2019
 ids_to_drop = df.loc[df["Quarter"] > 2019, "FundID"].unique()
-
-# Drop all rows with those FundsIDs
 df = df[~df["FundID"].isin(ids_to_drop)].reset_index(drop=True)
 
-print("Data loaded")
-print("Elapsed time:", time.time() - start, "seconds")
+logging.info("Data loaded")
+logging.info("Elapsed time: %.2f seconds", time.time() - start)
 
 # Filter to only relevant asset classes
-asset_classes = ['Private Equity', 'Venture Capital', 'Real Estate'] #
+asset_classes = ['Private Equity', 'Venture Capital', 'Real Estate']
 
 strip_columns = [
     'ZeroCouponBond', 'DividendValue', 'DividendREIT',
@@ -38,16 +39,16 @@ strip_columns = [
 horizon = 64
 strips = 15
 
-print("Starting elastic net regression...")
-# To store results
+logging.info("Starting elastic net regression...")
+
 results = {}
+max_iter = 15000
 
 for asset_class in asset_classes:
-    print("Processing asset class", asset_class)
+    logging.info("Processing asset class: %s", asset_class)
     df_ac = df[df['AssetClass'] == asset_class]
-
     funds = df_ac['FundID'].unique()
-    n_funds = len(df_ac['FundID'].unique())
+    n_funds = len(funds)
 
     F = np.zeros((n_funds, strips, horizon))
     X = np.zeros((n_funds, horizon))
@@ -57,39 +58,39 @@ for asset_class in asset_classes:
         X[i] = df_ac[df_ac['FundID'] == fund]['ScaledCashflow'].values
         F[i] = df_ac[df_ac['FundID'] == fund][strip_columns].values.T
 
-        # Zero out rows in X[i] where y[i] is zero
-        # zero_indices = np.where(X[i] == 0)[0]
-        # F[i][:, zero_indices] = 0
+    for h in range(horizon):
+        F[:, :, h] = StandardScaler().fit_transform(F[:, :, h])
+        X[:, h] -= X[:, h].mean()
 
-    F = (F - np.mean(F, axis=0))
-    X = (X - np.mean(X, axis=0))
+    l1_ratios = [1, 0.99, 0.7, 0.5, 0.3, 0.1, 1e-3, 1e-5, 1e-7]
+    best_l1_ratio, best_alpha = cross_validate_elastic_net(x=F, y=X, l1_ratios=l1_ratios, n_alphas=5, cv_splits=5, max_iter=max_iter)
 
-    alphas = generate_alpha_grid(X=F,y=X,n_alphas=25)
-    best_alpha, best_l1_ratio = cross_validate_elastic_net(X=F, y=X, alphas=alphas, l1_ratios=[10**(-6),10**(-7),10**(-8), 10**(-9), 0])
-    B_final = multitask_elastic_net(X=F, Y=X, alpha=best_alpha, l1_ratio=best_l1_ratio)
-    results[asset_class] = B_final
+    logging.info("Best l1_ratio: %.5f, alpha: %.5f for asset class: %s", best_l1_ratio, best_alpha, asset_class)
 
-# optionally: index = feature names, columns = task names
+    B_final = ADMM_elastic_net(x=F, y=X, alpha=best_alpha, l1_ratio=best_l1_ratio, max_iter=max_iter)
+    results[asset_class] = {'B': B_final, 'l1': best_l1_ratio, 'alpha': best_alpha}
+
+    logging.info("Finished processing %s", asset_class)
+    logging.info("Elapsed time: %.2f seconds", time.time() - start)
+
+# Export results
+logging.info("Exporting results to Excel...")
+
 with pd.ExcelWriter('old/multitask_elastic_net_results_6.xlsx') as writer:
-    for asset_class, B in results.items():
-        df = pd.DataFrame(B)
-        df.to_excel(writer, sheet_name=asset_class[:31], index=False)
+    summary_data = []
 
-# Assuming B has shape (K=15, H=64)
-fig, axes = plt.subplots(nrows=1, ncols=3, figsize=(18, 6), sharey=True)
-quarters = list(range(1, 65))  # x-axis: 1 to 64
+    for asset_class in results:
+        B = results[asset_class]['B']
+        l1 = results[asset_class]['l1']
+        alpha = results[asset_class]['alpha']
 
-for ax, (asset_class, B) in zip(axes, results.items()):
-    B = np.array(B)  # Ensure it's a NumPy array
-    for i in range(B.shape[0]):  # K=15 rows (features)
-        ax.plot(quarters, B[i], label=f'{strip_columns[i]}')
+        df = pd.DataFrame(B, index=strip_columns)
+        df.to_excel(writer, sheet_name=asset_class[:31], index=True)
 
-    ax.set_title(asset_class)
-    ax.set_xlabel("Quarter")
-    ax.grid(True)
+        summary_data.append({'Asset Class': asset_class, 'l1_ratio': l1, 'alpha': alpha})
 
-axes[0].set_ylabel("Coefficient value")
-axes[0].legend(loc='upper right', fontsize='small', ncol=2)
+    summary_df = pd.DataFrame(summary_data)
+    summary_df.to_excel(writer, sheet_name='Summary', index=False)
 
-plt.tight_layout()
-plt.show()
+logging.info("Results exported successfully.")
+logging.info("Total elapsed time: %.2f seconds", time.time() - start)
